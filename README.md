@@ -76,7 +76,7 @@ alert/
 ```
 
 ```javascript
-loader: 'baggage?template[Dir].html=[file]Template&[dir][File].css'
+loader: 'baggage?template[Dir].html=[file]Template&[dir][File]Styles.css'
 ```
 
 ```javascript
