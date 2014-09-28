@@ -22,14 +22,14 @@ Imagine that you have project structure like this and you're using webpack:
 
 ```
 components/
-├── component-1
+├── component-1/
 │   ├── script.js
 │   ├── styles.css
 │   └── template.html
-├── component-2
+├── component-2/
 │   ├── script.js
 │   └── template.html
-└── component-3
+└── component-3/
     ├── script.js
     └── styles.css
 ```
@@ -40,7 +40,7 @@ and in each of component's `script.js` you're doing something like this:
 var template = require('./template.html');
 require('./styles.css');
 
-var html = template({ foo: 'bar' };
+var html = template({ foo: 'bar' });
 ```
 
 Now you have to stop and give it to `baggage-loader`, so:
