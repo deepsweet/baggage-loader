@@ -6,7 +6,7 @@
 [![dev deps](http://img.shields.io/david/dev/deepsweet/baggage-loader.svg?style=flat-square)](https://david-dm.org/deepsweet/baggage-loader#info=devDependencies)
 ![unicorn approved](http://img.shields.io/badge/unicorn-approved-ff69b4.svg?style=flat-square)
 
-Automatically `require()` any resources related to the `require()`d one. See example below.
+Automatically require any resources related to the required one. See example below.
 
 [Documentation: Using loaders](https://webpack.github.io/docs/using-loaders.html).
 
@@ -55,7 +55,7 @@ module: {
 }
 ```
 
-will become the necessary `require()`s with variables declarations if corresponding files exists:
+will become the necessary requires with variables declarations if corresponding files exists:
 
 ```javascript
 // injected by preloader at the top of script.js
