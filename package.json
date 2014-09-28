@@ -1,0 +1,35 @@
+{
+  "name": "baggage-loader",
+  "version": "0.1.0",
+  "description": "webpack loader to automatically require any resources related to the required one",
+  "keywords": [
+    "webpack",
+    "loader"
+  ],
+  "homepage": "https://github.com/deepsweet/baggage-loader",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/deepsweet/baggage-loader.git"
+  },
+  "author": {
+    "name": "Kir Belevich",
+    "email": "kir@soulshine.in",
+    "url": "https://github.com/deepsweet"
+  },
+  "main": "index.js",
+  "peerDependencies": {
+    "webpack": "^1.4.3",
+    "loader-utils": "^0.2.4"
+  },
+  "devDependencies": {
+    "eslint": "^0.8.2",
+    "jscs": "^1.6.2"
+  },
+  "scripts": {
+    "test": "eslint index.js lib/*.js && jscs index.js lib/*.js"
+  },
+  "engines": {
+    "node": ">=0.10.0"
+  },
+  "license": "WTFPL"
+}
