@@ -51,7 +51,7 @@ module: {
         test: /\/components\/.+script\.js$/,
         // baggage?file=var&file-without-var&…
         loader: 'baggage?template.html=template&styles.css'
-    } ],
+    } ]
 }
 ```
 
@@ -69,10 +69,10 @@ var html = template({ foo: 'bar' };
 Even more, there are placeholders `[dir]`, `[Dir]`, `[file]` and `[File]`, so you can use them in various tricky ways both with `file` and `var`:
 
 ```
-└── alert
-    ├── view.js
-    ├── templateAlert.html
-    └── alertViewStyles.css
+alert/
+├── view.js
+├── templateAlert.html
+└── alertViewStyles.css
 ```
 
 ```javascript
@@ -86,9 +86,9 @@ require('./alertViewStyles.css');
 
 ### Test
 
-Soon.
-
 `npm test`
+
+Soon.
 
 ### License
 [WTFPL](http://www.wtfpl.net/wp-content/uploads/2012/12/wtfpl-strip.jpg)
