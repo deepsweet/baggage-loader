@@ -79,9 +79,16 @@ module.exports = function(source, sourceMap) {
             return;
         }
 
-        // inject collected string at the top of file
+        // prepend collected inject at the top of file
         return inject + source;
     }
 
+    // return the original source and sourceMap
+    if (sourceMap) {
+        this.callback(null, source, sourceMap);
+        return;
+    }
+
+    // return the original source
     return source;
 };
