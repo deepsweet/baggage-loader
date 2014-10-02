@@ -3,12 +3,11 @@
 var path = require('path');
 var fs = require('fs');
 var loaderUtils = require('loader-utils');
-
+var SourceMap = require('source-map');
 var util = require('./lib/util');
 
-module.exports = function(source) {
+module.exports = function(source, sourceMap) {
     var query = loaderUtils.parseQuery(this.query);
-    var inject = '';
 
     // /foo/bar/file.js
     var srcFilepath = this.resourcePath;
@@ -23,8 +22,10 @@ module.exports = function(source) {
         this.cacheable();
     }
 
-    for (var baggageFile in query) {
-        if (query.hasOwnProperty(baggageFile)) {
+    if (Object.keys(query).length) {
+        var inject = '\n/* injects from baggage-loader */\n';
+
+        Object.keys(query).forEach(function(baggageFile) {
             var baggageVar = query[baggageFile];
 
             // TODO: not so quick and dirty validation
@@ -52,12 +53,34 @@ module.exports = function(source) {
                     }
                 } catch (e) {}
             }
-        }
-    }
+        });
 
-    // inject collected string at the top of file
-    if (inject) {
-        return inject + '\n' + source;
+        inject += '\n';
+
+        // support existing SourceMap
+        // https://github.com/mozilla/source-map#sourcenode
+        // https://github.com/webpack/imports-loader/blob/master/index.js#L34-L44
+        // https://webpack.github.io/docs/loaders.html#writing-a-loader
+        if (sourceMap) {
+            var currentRequest = loaderUtils.getCurrentRequest(this);
+            var SourceNode = SourceMap.SourceNode;
+            var SourceMapConsumer = SourceMap.SourceMapConsumer;
+            var sourceMapConsumer = new SourceMapConsumer(sourceMap);
+            var node = SourceNode.fromStringWithSourceMap(source, sourceMapConsumer);
+
+            node.prepend(inject);
+
+            var result = node.toStringWithSourceMap({
+                file: currentRequest
+            });
+
+            this.callback(null, result.code, result.map.toJSON());
+
+            return;
+        }
+
+        // inject collected string at the top of file
+        return inject + source;
     }
 
     return source;

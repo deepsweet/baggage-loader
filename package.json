@@ -1,7 +1,7 @@
 {
   "name": "baggage-loader",
-  "version": "0.1.0",
-  "description": "webpack loader to automatically require any resources related to the required one",
+  "version": "0.2.0",
+  "description": "Webpack loader to automatically require any resources related to the required one",
   "keywords": [
     "webpack",
     "loader"
@@ -19,7 +19,8 @@
   "main": "index.js",
   "peerDependencies": {
     "webpack": "^1.4.3",
-    "loader-utils": "^0.2.4"
+    "loader-utils": "^0.2.4",
+    "source-map": "^0.1.39"
   },
   "devDependencies": {
     "eslint": "^0.8.2",
