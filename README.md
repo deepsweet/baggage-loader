@@ -13,7 +13,7 @@ Automatically require any resources related to the required one. See example bel
 ### Install
 
 ```sh
-npm i -S baggage-loader
+$ npm i -S baggage-loader
 ```
 
 ### Usage
