@@ -1,9 +1,9 @@
 ## "Baggage" loader for [webpack](https://webpack.github.io/)
 
-[![travis](http://img.shields.io/travis/deepsweet/baggage-loader.svg?style=flat-square)](https://travis-ci.org/deepsweet/baggage-loader)
 [![npm](http://img.shields.io/npm/v/baggage-loader.svg?style=flat-square)](https://www.npmjs.org/package/baggage-loader)
+[![travis](http://img.shields.io/travis/deepsweet/baggage-loader.svg?style=flat-square)](https://travis-ci.org/deepsweet/baggage-loader)
+[![climate](http://img.shields.io/codeclimate/github/deepsweet/baggage-loader.svg?style=flat-square)](https://codeclimate.com/github/deepsweet/baggage-loader/code)
 [![peer deps](http://img.shields.io/david/peer/deepsweet/baggage-loader.svg?style=flat-square)](https://david-dm.org/deepsweet/baggage-loader#info=peerDependencies)
-[![dev deps](http://img.shields.io/david/dev/deepsweet/baggage-loader.svg?style=flat-square)](https://david-dm.org/deepsweet/baggage-loader#info=devDependencies)
 [![gratipay](http://img.shields.io/gratipay/deepsweet.svg?style=flat-square)](https://gratipay.com/deepsweet/)
 
 Automatically require any resources related to the required one. See example below.
