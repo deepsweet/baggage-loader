@@ -49,7 +49,7 @@ module.exports = function(source, sourceMap) {
                         }
 
                         // and require
-                        inject += 'require("./' + baggageFile + '");\n';
+                        inject += 'require(\'./' + baggageFile + '\');\n';
                     }
                 } catch (e) {}
             }
