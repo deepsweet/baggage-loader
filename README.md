@@ -83,12 +83,3 @@ loader: 'baggage?template[Dir].html=[file]Template&[dir][File]Styles.css'
 var viewTemplate = require('./templateAlert.html');
 require('./alertViewStyles.css');
 ```
-
-### Test
-
-`npm test`
-
-Soon.
-
-### License
-[WTFPL](http://www.wtfpl.net/wp-content/uploads/2012/12/wtfpl-strip.jpg)
