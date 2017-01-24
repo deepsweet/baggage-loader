@@ -1,6 +1,6 @@
 {
   "name": "baggage-loader",
-  "version": "0.2.4",
+  "version": "0.1.0",
   "description": "Webpack loader to automatically require any resources related to the required one",
   "keywords": [
     "webpack",

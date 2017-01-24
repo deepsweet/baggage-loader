@@ -4,9 +4,20 @@ var path = require('path');
 var fs = require('fs');
 var loaderUtils = require('loader-utils');
 var SourceMap = require('source-map');
+
+var legacyLoader = require('./compat/legacy-loader.js');
 var util = require('./lib/util');
 
+var injectBanner = '\n/* injects from baggage-loader */\n';
+
 module.exports = function(source, sourceMap) {
+    // parseQuery will always give us an object, for back-compat we
+    // want to know if we're working with JSON query or query string 
+    if (!util.isJSONString(this.query.replace('?', ''))) {
+
+      return legacyLoader.call(this, source, sourceMap);
+    }
+
     var query = loaderUtils.parseQuery(this.query);
 
     // /foo/bar/file.js
@@ -22,40 +33,53 @@ module.exports = function(source, sourceMap) {
         this.cacheable();
     }
 
-    if (Object.keys(query).length) {
-        var inject = '\n/* injects from baggage-loader */\n';
+    var filePaths = Object.keys(query);
+    var injections = [];
+    if (filePaths.length) {
+      injections = filePaths.map(function(filePath) {
 
-        Object.keys(query).forEach(function(baggageFile) {
-            var baggageVar = query[baggageFile];
+        var varName;
+        var loadersForFile = '';
+        var inject = null;
 
-            // TODO: not so quick and dirty validation
-            if (typeof baggageVar === 'string' || baggageVar === true) {
-                // apply filename placeholders
-                baggageFile = util.applyPlaceholders(baggageFile, srcDirname, srcFilename);
+        if (typeof query[filePath] === 'object') {
+          var fileConfig = query[filePath];
+          var loaderStringForFile = fileConfig.loaders || '';
+          loadersForFile = loaderStringForFile.replace(/\*/g, '!') + '!';
+          
+          varName = fileConfig.varName;
+        }
 
-                // apply var placeholders
-                if (baggageVar.length) {
-                    baggageVar = util.applyPlaceholders(baggageVar, srcDirname, srcFilename);
+        filePath = util.applyPlaceholders(filePath, srcDirname, srcFilename);
+        if (varName) {
+          varName = util.applyPlaceholders(varName, srcDirname, srcFilename);
+        }
+
+        // @todo support mandatory/optional requires via config
+        try {
+
+            // check if absoluted from srcDirpath + baggageFile path exists
+            var stats = fs.statSync(path.resolve(srcDirpath, filePath));
+
+            if (stats.isFile()) {
+                inject = '';              
+                if (varName) {
+                    inject = 'var ' + varName + ' = ';
                 }
 
-                try {
-                    // check if absoluted from srcDirpath + baggageFile path exists
-                    var stats = fs.statSync(path.resolve(srcDirpath, baggageFile));
-
-                    if (stats.isFile()) {
-                        // assign it to variable
-                        if (baggageVar.length) {
-                            inject += 'var ' + baggageVar + ' = ';
-                        }
-
-                        // and require
-                        inject += 'require(\'./' + baggageFile + '\');\n';
-                    }
-                } catch (e) {}
+                inject += 'require(\'' + loadersForFile + './' + filePath + '\');\n';
             }
-        });
+        } catch (e) {}
 
-        inject += '\n';
+        return inject;
+      });
+
+      injections.filter(function(inject) {
+        return typeof inject === 'string';
+      });
+
+      if (injections.length) {
+        var srcInjection = injectBanner + injections.join('\n');
 
         // support existing SourceMap
         // https://github.com/mozilla/source-map#sourcenode
@@ -68,7 +92,7 @@ module.exports = function(source, sourceMap) {
             var sourceMapConsumer = new SourceMapConsumer(sourceMap);
             var node = SourceNode.fromStringWithSourceMap(source, sourceMapConsumer);
 
-            node.prepend(inject);
+            node.prepend(srcInjection);
 
             var result = node.toStringWithSourceMap({
                 file: currentRequest
@@ -80,7 +104,9 @@ module.exports = function(source, sourceMap) {
         }
 
         // prepend collected inject at the top of file
-        return inject + source;
+        return srcInjection + source;
+      }
+      
     }
 
     // return the original source and sourceMap
