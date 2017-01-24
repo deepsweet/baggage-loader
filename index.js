@@ -1,3 +1,4 @@
+/* eslint-disable consistent-return */
 'use strict';
 
 var path = require('path');
@@ -12,10 +13,9 @@ var injectBanner = '\n/* injects from baggage-loader */\n';
 
 module.exports = function(source, sourceMap) {
     // parseQuery will always give us an object, for back-compat we
-    // want to know if we're working with JSON query or query string 
+    // want to know if we're working with JSON query or query string
     if (!util.isJSONString(this.query.replace('?', ''))) {
-
-      return legacyLoader.call(this, source, sourceMap);
+        return legacyLoader.call(this, source, sourceMap);
     }
 
     var query = loaderUtils.parseQuery(this.query);
@@ -36,77 +36,77 @@ module.exports = function(source, sourceMap) {
     var filePaths = Object.keys(query);
     var injections = [];
     if (filePaths.length) {
-      injections = filePaths.map(function(filePath) {
+        injections = filePaths.map(function(filePath) {
 
-        var varName;
-        var loadersForFile = '';
-        var inject = null;
+            var varName;
+            var loadersForFile = '';
+            var inject = null;
 
-        if (typeof query[filePath] === 'object') {
-          var fileConfig = query[filePath];
-          var loaderStringForFile = fileConfig.loaders || '';
-          loadersForFile = loaderStringForFile.replace(/\*/g, '!') + '!';
-          
-          varName = fileConfig.varName;
-        }
+            if (typeof query[filePath] === 'object') {
+                var fileConfig = query[filePath];
+                var loaderStringForFile = fileConfig.loaders || '';
+                loadersForFile = loaderStringForFile.replace(/\*/g, '!') + '!';
 
-        filePath = util.applyPlaceholders(filePath, srcDirname, srcFilename);
-        if (varName) {
-          varName = util.applyPlaceholders(varName, srcDirname, srcFilename);
-        }
-
-        // @todo support mandatory/optional requires via config
-        try {
-
-            // check if absoluted from srcDirpath + baggageFile path exists
-            var stats = fs.statSync(path.resolve(srcDirpath, filePath));
-
-            if (stats.isFile()) {
-                inject = '';              
-                if (varName) {
-                    inject = 'var ' + varName + ' = ';
-                }
-
-                inject += 'require(\'' + loadersForFile + './' + filePath + '\');\n';
+                varName = fileConfig.varName;
             }
-        } catch (e) {}
 
-        return inject;
-      });
+            filePath = util.applyPlaceholders(filePath, srcDirname, srcFilename);
+            if (varName) {
+                varName = util.applyPlaceholders(varName, srcDirname, srcFilename);
+            }
 
-      injections.filter(function(inject) {
-        return typeof inject === 'string';
-      });
+            // @todo support mandatory/optional requires via config
+            try {
 
-      if (injections.length) {
-        var srcInjection = injectBanner + injections.join('\n');
+                // check if absoluted from srcDirpath + baggageFile path exists
+                var stats = fs.statSync(path.resolve(srcDirpath, filePath));
 
-        // support existing SourceMap
-        // https://github.com/mozilla/source-map#sourcenode
-        // https://github.com/webpack/imports-loader/blob/master/index.js#L34-L44
-        // https://webpack.github.io/docs/loaders.html#writing-a-loader
-        if (sourceMap) {
-            var currentRequest = loaderUtils.getCurrentRequest(this);
-            var SourceNode = SourceMap.SourceNode;
-            var SourceMapConsumer = SourceMap.SourceMapConsumer;
-            var sourceMapConsumer = new SourceMapConsumer(sourceMap);
-            var node = SourceNode.fromStringWithSourceMap(source, sourceMapConsumer);
+                if (stats.isFile()) {
+                    inject = '';
+                    if (varName) {
+                        inject = 'var ' + varName + ' = ';
+                    }
 
-            node.prepend(srcInjection);
+                    inject += 'require(\'' + loadersForFile + './' + filePath + '\');\n';
+                }
+            } catch (e) {}
 
-            var result = node.toStringWithSourceMap({
-                file: currentRequest
-            });
+            return inject;
+        });
 
-            this.callback(null, result.code, result.map.toJSON());
+        injections.filter(function(inject) {
+            return typeof inject === 'string';
+        });
 
-            return;
+        if (injections.length) {
+            var srcInjection = injectBanner + injections.join('\n');
+
+            // support existing SourceMap
+            // https://github.com/mozilla/source-map#sourcenode
+            // https://github.com/webpack/imports-loader/blob/master/index.js#L34-L44
+            // https://webpack.github.io/docs/loaders.html#writing-a-loader
+            if (sourceMap) {
+                var currentRequest = loaderUtils.getCurrentRequest(this);
+                var SourceNode = SourceMap.SourceNode;
+                var SourceMapConsumer = SourceMap.SourceMapConsumer;
+                var sourceMapConsumer = new SourceMapConsumer(sourceMap);
+                var node = SourceNode.fromStringWithSourceMap(source, sourceMapConsumer);
+
+                node.prepend(srcInjection);
+
+                var result = node.toStringWithSourceMap({
+                    file: currentRequest
+                });
+
+                this.callback(null, result.code, result.map.toJSON());
+
+                return;
+            }
+
+            // prepend collected inject at the top of file
+            return srcInjection + source;
         }
 
-        // prepend collected inject at the top of file
-        return srcInjection + source;
-      }
-      
     }
 
     // return the original source and sourceMap
