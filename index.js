@@ -45,7 +45,9 @@ module.exports = function(source, sourceMap) {
             if (typeof query[filePath] === 'object') {
                 var fileConfig = query[filePath];
                 var loaderStringForFile = fileConfig.loaders || '';
-                loadersForFile = loaderStringForFile.replace(/\*/g, '!') + '!';
+                if (loaderStringForFile) {
+                    loadersForFile = loaderStringForFile.replace(/\*/g, '!') + '!';
+                }
 
                 varName = fileConfig.varName;
             }
