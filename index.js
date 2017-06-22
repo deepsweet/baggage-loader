@@ -14,7 +14,7 @@ var injectBanner = '\n/* injects from baggage-loader */\n';
 module.exports = function(source, sourceMap) {
     // parseQuery will always give us an object, for back-compat we
     // want to know if we're working with JSON query or query string
-    if (!util.isJSONString(this.query.replace('?', ''))) {
+    if (typeof this.query === 'string' && !util.isJSONString(this.query.replace('?', ''))) {
         return legacyLoader.call(this, source, sourceMap);
     }
 
