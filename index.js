@@ -18,11 +18,11 @@ module.exports = function(source, sourceMap) {
         return legacyLoader.call(this, source, sourceMap);
     }
 
-    var query = loaderUtils.getOptions
-        ? loaderUtils.getOptions(this)
-        : typeof this.query === 'string'
-            ? loaderUtils.parseQuery(this.query)
-            : this.query;
+    var query = loaderUtils.getOptions ?
+        loaderUtils.getOptions(this) :
+        typeof this.query === 'string' ?
+            loaderUtils.parseQuery(this.query) :
+            this.query;
 
     // /foo/bar/file.js
     var srcFilepath = this.resourcePath;
