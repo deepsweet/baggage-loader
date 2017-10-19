@@ -3,3 +3,4 @@ tmp/
 *.sublime-*
 *.log
 .DS_Store
+package-lock.json

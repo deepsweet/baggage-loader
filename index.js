@@ -1,126 +1,103 @@
-/* eslint-disable consistent-return */
 'use strict';
 
-var path = require('path');
-var fs = require('fs');
-var loaderUtils = require('loader-utils');
-var SourceMap = require('source-map');
+const path = require('path');
+const loaderUtils = require('loader-utils');
+const SourceMap = require('source-map');
 
-var legacyLoader = require('./compat/legacy-loader.js');
-var util = require('./lib/util');
+const {applyPlaceholders, stat} = require('./lib/util');
 
-var injectBanner = '\n/* injects from baggage-loader */\n';
+module.exports = function (source, sourceMap) {
+    const callback = this.async();
 
-module.exports = function(source, sourceMap) {
-    // parseQuery will always give us an object, for back-compat we
-    // want to know if we're working with JSON query or query string
-    if (typeof this.query === 'string' && !util.isJSONString(this.query.replace('?', ''))) {
-        return legacyLoader.call(this, source, sourceMap);
-    }
-
-    var query = loaderUtils.getOptions ?
-        loaderUtils.getOptions(this) :
-        typeof this.query === 'string' ?
-            loaderUtils.parseQuery(this.query) :
-            this.query;
+    const query = loaderUtils.getOptions(this);
 
     // /foo/bar/file.js
-    var srcFilepath = this.resourcePath;
+    const srcFilepath = this.resourcePath;
     // /foo/bar/file.js -> file
-    var srcFilename = path.basename(srcFilepath, path.extname(srcFilepath));
+    const srcFilename = path.basename(srcFilepath, path.extname(srcFilepath));
     // /foo/bar/file.js -> /foo/bar
-    var srcDirpath = path.dirname(srcFilepath);
+    const srcDirpath = path.dirname(srcFilepath);
     // /foo/bar -> bar
-    var srcDirname = srcDirpath.split(path.sep).pop();
+    const srcDirname = srcDirpath.split(path.sep).pop();
 
     if (this.cacheable) {
         this.cacheable();
     }
 
-    var filePaths = Object.keys(query);
-    var injections = [];
-    if (filePaths.length) {
-        injections = filePaths.map(function(filePath) {
+    return Promise.all(Object.keys(query).map(filePath => {
 
-            var varName;
-            var loadersForFile = '';
-            var inject = null;
+        let varName;
+        let loadersForFile = '';
 
-            if (typeof query[filePath] === 'object') {
-                var fileConfig = query[filePath];
-                var loaderStringForFile = fileConfig.loaders || '';
-                if (loaderStringForFile) {
-                    loadersForFile = loaderStringForFile.replace(/\*/g, '!') + '!';
-                }
-
-                varName = fileConfig.varName;
+        if (typeof query[filePath] === 'object') {
+            const fileConfig = query[filePath];
+            const loaderStringForFile = fileConfig.loaders || '';
+            if (loaderStringForFile) {
+                loadersForFile = loaderStringForFile.replace(/\*/g, '!') + '!';
             }
 
-            filePath = util.applyPlaceholders(filePath, srcDirname, srcFilename);
-            if (varName) {
-                varName = util.applyPlaceholders(varName, srcDirname, srcFilename);
-            }
+            varName = applyPlaceholders(fileConfig.varName, srcDirname, srcFilename);
+        }
 
-            // @todo support mandatory/optional requires via config
-            try {
 
-                // check if absoluted from srcDirpath + baggageFile path exists
-                var stats = fs.statSync(path.resolve(srcDirpath, filePath));
+        filePath = applyPlaceholders(filePath, srcDirname, srcFilename);
 
-                if (stats.isFile()) {
-                    inject = '';
-                    if (varName) {
-                        inject = 'var ' + varName + ' = ';
-                    }
+        // @todo support mandatory/optional requires via config
 
-                    inject += 'require(\'' + loadersForFile + './' + filePath + '\');\n';
+        // check if absoluted from srcDirpath + baggageFile path exists
+        return stat(path.resolve(srcDirpath, filePath))
+            .then(stats => {
+                if (!stats.isFile()) {
+                    return;
                 }
-            } catch (e) {}
 
-            return inject;
-        });
+                let inject = 'import ';
+                if (varName) {
+                    inject = varName + ' from ';
+                }
 
-        injections.filter(function(inject) {
-            return typeof inject === 'string';
-        });
+                return inject + '\'' + loadersForFile + './' + filePath + '\';\n';
+            })
+            //eslint-disable-next-line
+            .catch((e) => {
+                //log a warning/error?
+            });
+        }))
+        .then(results => {
 
-        if (injections.length) {
-            var srcInjection = injectBanner + injections.join('\n');
+            const injections = results.filter(x => typeof x === 'string');
 
-            // support existing SourceMap
-            // https://github.com/mozilla/source-map#sourcenode
-            // https://github.com/webpack/imports-loader/blob/master/index.js#L34-L44
-            // https://webpack.github.io/docs/loaders.html#writing-a-loader
-            if (sourceMap) {
-                var currentRequest = loaderUtils.getCurrentRequest(this);
-                var SourceNode = SourceMap.SourceNode;
-                var SourceMapConsumer = SourceMap.SourceMapConsumer;
-                var sourceMapConsumer = new SourceMapConsumer(sourceMap);
-                var node = SourceNode.fromStringWithSourceMap(source, sourceMapConsumer);
+            if (injections.length) {
+                const srcInjection = injections.join('\n');
 
-                node.prepend(srcInjection);
+                // support existing SourceMap
+                // https://github.com/mozilla/source-map#sourcenode
+                // https://github.com/webpack/imports-loader/blob/master/index.js#L34-L44
+                // https://webpack.github.io/docs/loaders.html#writing-a-loader
+                if (sourceMap) {
+                    const currentRequest = loaderUtils.getCurrentRequest(this);
+                    const SourceNode = SourceMap.SourceNode;
+                    const SourceMapConsumer = SourceMap.SourceMapConsumer;
+                    const sourceMapConsumer = new SourceMapConsumer(sourceMap);
+                    const node = SourceNode.fromStringWithSourceMap(source, sourceMapConsumer);
 
-                var result = node.toStringWithSourceMap({
-                    file: currentRequest
-                });
+                    node.prepend(srcInjection);
 
-                this.callback(null, result.code, result.map.toJSON());
+                    const result = node.toStringWithSourceMap({
+                        file: currentRequest
+                    });
 
+                    callback(null, result.code, result.map.toJSON());
+                    return;
+                }
+
+                // prepend collected inject at the top of file
+                callback(null, srcInjection + source);
                 return;
             }
 
-            // prepend collected inject at the top of file
-            return srcInjection + source;
-        }
 
-    }
-
-    // return the original source and sourceMap
-    if (sourceMap) {
-        this.callback(null, source, sourceMap);
-        return;
-    }
-
-    // return the original source
-    return source;
+            // return the originals
+            callback(null, source, sourceMap);
+        });
 };
