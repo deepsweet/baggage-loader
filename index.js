@@ -4,9 +4,9 @@ const path = require('path');
 const loaderUtils = require('loader-utils');
 const SourceMap = require('source-map');
 
-const {applyPlaceholders, stat} = require('./lib/util');
+const { applyPlaceholders, stat } = require('./lib/util');
 
-module.exports = function (source, sourceMap) {
+module.exports = function(source, sourceMap) {
     const callback = this.async();
 
     const query = loaderUtils.getOptions(this);
@@ -24,44 +24,44 @@ module.exports = function (source, sourceMap) {
         this.cacheable();
     }
 
-    return Promise.all(Object.keys(query).map(filePath => {
+    return Promise.all(Object.keys(query)
+        .map(filePath => {
 
-        let varName;
-        let loadersForFile = '';
+            let varName;
+            let loadersForFile = '';
 
-        if (typeof query[filePath] === 'object') {
-            const fileConfig = query[filePath];
-            const loaderStringForFile = fileConfig.loaders || '';
-            if (loaderStringForFile) {
-                loadersForFile = loaderStringForFile.replace(/\*/g, '!') + '!';
+            if (typeof query[filePath] === 'object') {
+                const fileConfig = query[filePath];
+                const loaderStringForFile = fileConfig.loaders || '';
+                if (loaderStringForFile) {
+                    loadersForFile = loaderStringForFile.replace(/\*/g, '!') + '!';
+                }
+
+                varName = applyPlaceholders(fileConfig.varName, srcDirname, srcFilename);
             }
 
-            varName = applyPlaceholders(fileConfig.varName, srcDirname, srcFilename);
-        }
+            filePath = applyPlaceholders(filePath, srcDirname, srcFilename);
 
+            // @todo support mandatory/optional requires via config
 
-        filePath = applyPlaceholders(filePath, srcDirname, srcFilename);
+            // check if absoluted from srcDirpath + baggageFile path exists
+            return stat(path.resolve(srcDirpath, filePath))
+                .then(stats => {
+                    if (!stats.isFile()) {
+                        return;
+                    }
 
-        // @todo support mandatory/optional requires via config
+                    let inject = 'import ';
+                    if (varName) {
+                        inject = varName + ' from ';
+                    }
 
-        // check if absoluted from srcDirpath + baggageFile path exists
-        return stat(path.resolve(srcDirpath, filePath))
-            .then(stats => {
-                if (!stats.isFile()) {
-                    return;
-                }
-
-                let inject = 'import ';
-                if (varName) {
-                    inject = varName + ' from ';
-                }
-
-                return inject + '\'' + loadersForFile + './' + filePath + '\';\n';
-            })
-            //eslint-disable-next-line
-            .catch((e) => {
-                //log a warning/error?
-            });
+                    return inject + '\'' + loadersForFile + './' + filePath + '\';\n';
+                })
+                // eslint-disable-next-line
+                .catch((e) => {
+                    // log a warning/error?
+                });
         }))
         .then(results => {
 
@@ -95,7 +95,6 @@ module.exports = function (source, sourceMap) {
                 callback(null, srcInjection + source);
                 return;
             }
-
 
             // return the originals
             callback(null, source, sourceMap);
