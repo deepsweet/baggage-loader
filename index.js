@@ -6,6 +6,8 @@ const SourceMap = require('source-map');
 
 const { applyPlaceholders, stat } = require('./lib/util');
 
+const HAS_COMMONJS = /(\brequire\([^)]+\))|(module\.exports)/g;
+
 module.exports = function(source, sourceMap) {
     const callback = this.async();
 
@@ -23,6 +25,8 @@ module.exports = function(source, sourceMap) {
     if (this.cacheable) {
         this.cacheable();
     }
+
+    const hasCommonJS = HAS_COMMONJS.test(source);
 
     return Promise.all(Object.keys(query)
         .map(filePath => {
@@ -49,6 +53,15 @@ module.exports = function(source, sourceMap) {
                 .then(stats => {
                     if (!stats.isFile()) {
                         return;
+                    }
+
+                    if (hasCommonJS) {
+                        let inject = '';
+                        if (varName) {
+                            inject = 'const ' + varName + ' = ';
+                        }
+
+                        return inject + 'require(\'' + loadersForFile + './' + filePath + '\');\n';
                     }
 
                     let inject = 'import ';
