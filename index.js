@@ -6,7 +6,7 @@ const SourceMap = require('source-map');
 
 const { applyPlaceholders, stat } = require('./lib/util');
 
-const HAS_COMMONJS = /(\brequire\([^)]+\))|(module\.exports)/g;
+const HAS_COMMONJS = /(\s+require\s*\()|(module\.exports)/g;
 
 module.exports = function(source, sourceMap) {
     this.cacheable(true);
@@ -23,7 +23,9 @@ module.exports = function(source, sourceMap) {
     // /foo/bar -> bar
     const srcDirname = srcDirpath.split(path.sep).pop();
 
-    const hasCommonJS = HAS_COMMONJS.test(source);
+    const sourceString = source.toString('utf8');
+
+    const hasCommonJS = HAS_COMMONJS.test(sourceString);
 
     Promise.all(Object.keys(query)
         .map(filePath => {
@@ -89,7 +91,7 @@ module.exports = function(source, sourceMap) {
                     const SourceNode = SourceMap.SourceNode;
                     const SourceMapConsumer = SourceMap.SourceMapConsumer;
                     const sourceMapConsumer = new SourceMapConsumer(sourceMap);
-                    const node = SourceNode.fromStringWithSourceMap(source, sourceMapConsumer);
+                    const node = SourceNode.fromStringWithSourceMap(sourceString, sourceMapConsumer);
 
                     node.prepend(srcInjection);
 
@@ -102,7 +104,7 @@ module.exports = function(source, sourceMap) {
                 }
 
                 // prepend collected inject at the top of file
-                callback(null, srcInjection + source);
+                callback(null, srcInjection + sourceString);
                 return;
             }
 
