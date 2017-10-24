@@ -6,7 +6,7 @@
 [![peer deps](http://img.shields.io/david/peer/deepsweet/baggage-loader.svg?style=flat-square)](https://david-dm.org/deepsweet/baggage-loader#info=peerDependencies)
 [![gratipay](http://img.shields.io/gratipay/deepsweet.svg?style=flat-square)](https://gratipay.com/deepsweet/)
 
-Automatically require any resources related to the required one. See example below.
+Automatically import any resources related to the importd one. See example below.
 
 [Documentation: Using loaders](https://webpack.github.io/docs/using-loaders.html).
 
@@ -37,19 +37,32 @@ components/
 and in each of component's `script.js` you're doing something like this:
 
 ```javascript
-var template = require('./template.html');
-require('./styles.css');
+import template from './template.html';
+import './styles.css';
 
 var html = template({ foo: 'bar' });
 ```
 
-Now you can stop and let `baggage-loader` handle those `require`s, like so:
+Now you can stop and let `baggage-loader` handle those `import`s, like so:
 
 ```javascript
 module: {
     loaders: [ {
         test: /\/components\/.+script\.js$/,
-        loader: 'baggage?{"template.html":{"varName":"template"},"styles.css":{}}'
+        loader: 'baggage-loader'
+        options: {
+          "template.html": {"varName":"template"},
+          "styles.css": {}
+        }
+    } ]
+}
+```
+or as json-query-string:
+```javascript
+module: {
+    loaders: [ {
+        test: /\/components\/.+script\.js$/,
+        loader: 'baggage-loader?{"template.html":{"varName":"template"},"styles.css":{}}'
     } ]
 }
 ```
@@ -58,49 +71,59 @@ The example above will become the necessary requires, with variable declarations
 
 ```javascript
 // injected by preloader at the top of script.js
-var template = require('./template.html');
-require('./styles.css');
+import template from './template.html';
+import './styles.css';
 
 // your code
-var html = template({ foo: 'bar' };
+const html = template({ foo: 'bar' };
 ```
 
 ## Usage
-The 'baggage' -- the additional `require`s you want `baggage-loader` to insert -- is specified via the loader's query string. This query string must be written as a JSON string (see below for deprecated url-style query string syntax).
+The 'baggage' -- the additional `import`s you want `baggage-loader` to insert -- is specified via the loader's query string. This query string must be written as a JSON string (see below for deprecated url-style query string syntax).
 
 ## Format
-### Basic require (no options): 
-`?{"filename.ext":{}}`
+### Basic import (no options):
+```js
+?{"filename.ext":{}}
+```
 
-This will insert `require('./filename.ext');` into each module to which the loader is applied
+This will insert `import './filename.ext';` into each module to which the loader is applied
 
-### Require with variable name: 
-`?{"filename.ext":{"varName":"foo"}}`
+### import with variable name:
+```js
+?{"filename.ext":{"varName":"foo"}}
+```
 
-This will insert `var foo = require('./filename.ext');` 
+This will insert `import foo from './filename.ext';`
 
-### Require with 'inline' loaders:
-`?{"filename.ext":{"loaders":"style*css*sass"}}`
+### import with 'inline' loaders:
+```js
+?{"filename.ext":{"loaders":"style*css*sass"}}
+```
 
-This will insert `require('style!css!sass!./filename.ext');`. Note that asterisks are replaced with exclamation points; the loader will append the final exclamation point between your loaders and the file path. If you are overriding existing loader config, you will need to prefix your loader string with `*` so that the loader string begins with `!` (the leading exclamation point is webpack's syntax for overriding loaders).
+This will insert `import 'style!css!sass!./filename.ext';`. Note that asterisks are replaced with exclamation points; the loader will append the final exclamation point between your loaders and the file path. If you are overriding existing loader config, you will need to prefix your loader string with `*` so that the loader string begins with `!` (the leading exclamation point is webpack's syntax for overriding loaders).
 
 ### Combined
 Any of the above can be combined, for example:
 
-`?{"filename.ext":{"varName":"foo","loaders":"style*css*sass}}`
-
-will insert `var foo = require('style!css!sass!./filename.ext');`. You can also have more than one baggage file in your params:
-
-`?{"filename.js":{},"filename.scss":{}}`
-
-The above will insert 
-
-```javascript
-require('./filename.js');
-require('./filename.scss');
+```js
+?{"filename.ext":{"varName":"foo","loaders":"style*css*sass"}}
 ```
 
-When defining a large amount of loader parameters, you may find it easier to define the JSON object and then stringify it for use in your loader config. 
+will insert `import foo from 'style!css!sass!./filename.ext';`. You can also have more than one baggage file in your params:
+
+```js
+?{"filename.js":{},"filename.scss":{}}
+```
+
+The above will insert
+
+```javascript
+import './filename.js';
+import './filename.scss';
+```
+
+When defining a large amount of loader parameters, you may find it easier to define the JSON object and then stringify it for use in your loader config.
 
 ### Supported placeholders
 
@@ -114,26 +137,16 @@ alert/
 ```
 
 ```javascript
-loader: 'baggage?template[Dir].html=[file]Template&[dir][File]Styles.css'
+{
+  loader: "baggage-loader",
+  options: {
+    "template[Dir].html": {varName: "[file]Template"},
+    "[dir][File]Styles.css":{}
+  }
+},
 ```
 
 ```javascript
-var viewTemplate = require('./templateAlert.html');
-require('./alertViewStyles.css');
+import viewTemplate from './templateAlert.html';
+import './alertViewStyles.css';
 ```
-
-## Pre-1.0 Usage
-Before version 1.0, the loader supported both JSON-style query strings and url-style query strings, and the syntax was different. The breaking change for the loader's parameters was made to support a greater range of parmaters to control the loader's behavior. The older syntax is still supported, but **only** when params are specfied as a url-style query string. (In other words, all url-style params will be treated as the old syntax, all JSON-style params will be treated as the 1.x+ syntax.) In the future, support for the older styntax will likely be removed; users are encouraged to update to the 1.x syntax.
-
-`?template.html=template&styles.css`
-
-The above would insert
-
-```
-var template = require('./template.html');
-require('./styles.css');
-```
-
-Note that the argument 'name' in this syntax is the file path, and if you assign a 'value', that value becomes the variable name. The file and directory placeholders may be used in this syntax just as in the 1.x+ syntax.
-
-Note that the above example demonstrates all of the functionality of the legacy syntax. Newer features, such as specifying loaders, are not supported.

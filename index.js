@@ -1,122 +1,114 @@
-/* eslint-disable consistent-return */
 'use strict';
 
-var path = require('path');
-var fs = require('fs');
-var loaderUtils = require('loader-utils');
-var SourceMap = require('source-map');
+const path = require('path');
+const loaderUtils = require('loader-utils');
+const SourceMap = require('source-map');
 
-var legacyLoader = require('./compat/legacy-loader.js');
-var util = require('./lib/util');
+const { applyPlaceholders, stat } = require('./lib/util');
 
-var injectBanner = '\n/* injects from baggage-loader */\n';
+const HAS_COMMONJS = /(\s+require\s*\()|(module\.exports)/;
 
 module.exports = function(source, sourceMap) {
-    // parseQuery will always give us an object, for back-compat we
-    // want to know if we're working with JSON query or query string
-    if (!util.isJSONString(this.query.replace('?', ''))) {
-        return legacyLoader.call(this, source, sourceMap);
-    }
+    this.cacheable(true);
+    const callback = this.async();
 
-    var query = loaderUtils.parseQuery(this.query);
+    const query = loaderUtils.getOptions(this);
 
     // /foo/bar/file.js
-    var srcFilepath = this.resourcePath;
+    const srcFilepath = this.resourcePath;
     // /foo/bar/file.js -> file
-    var srcFilename = path.basename(srcFilepath, path.extname(srcFilepath));
+    const srcFilename = path.basename(srcFilepath, path.extname(srcFilepath));
     // /foo/bar/file.js -> /foo/bar
-    var srcDirpath = path.dirname(srcFilepath);
+    const srcDirpath = path.dirname(srcFilepath);
     // /foo/bar -> bar
-    var srcDirname = srcDirpath.split(path.sep).pop();
+    const srcDirname = srcDirpath.split(path.sep).pop();
 
-    if (this.cacheable) {
-        this.cacheable();
-    }
+    const sourceString = source.toString('utf8');
 
-    var filePaths = Object.keys(query);
-    var injections = [];
-    if (filePaths.length) {
-        injections = filePaths.map(function(filePath) {
+    const hasCommonJS = HAS_COMMONJS.test(sourceString);
 
-            var varName;
-            var loadersForFile = '';
-            var inject = null;
+    Promise.all(Object.keys(query)
+        .map(filePath => {
+
+            let varName;
+            let loadersForFile = '';
 
             if (typeof query[filePath] === 'object') {
-                var fileConfig = query[filePath];
-                var loaderStringForFile = fileConfig.loaders || '';
+                const fileConfig = query[filePath];
+                const loaderStringForFile = fileConfig.loaders || '';
                 if (loaderStringForFile) {
                     loadersForFile = loaderStringForFile.replace(/\*/g, '!') + '!';
                 }
 
-                varName = fileConfig.varName;
+                varName = applyPlaceholders(fileConfig.varName, srcDirname, srcFilename);
             }
 
-            filePath = util.applyPlaceholders(filePath, srcDirname, srcFilename);
-            if (varName) {
-                varName = util.applyPlaceholders(varName, srcDirname, srcFilename);
-            }
+            filePath = applyPlaceholders(filePath, srcDirname, srcFilename);
 
             // @todo support mandatory/optional requires via config
-            try {
 
-                // check if absoluted from srcDirpath + baggageFile path exists
-                var stats = fs.statSync(path.resolve(srcDirpath, filePath));
-
-                if (stats.isFile()) {
-                    inject = '';
-                    if (varName) {
-                        inject = 'var ' + varName + ' = ';
+            // check if absoluted from srcDirpath + baggageFile path exists
+            return stat(path.resolve(srcDirpath, filePath))
+                .then(stats => {
+                    if (!stats.isFile()) {
+                        return;
                     }
 
-                    inject += 'require(\'' + loadersForFile + './' + filePath + '\');\n';
-                }
-            } catch (e) {}
+                    if (hasCommonJS) {
+                        let inject = '';
+                        if (varName) {
+                            inject = 'const ' + varName + ' = ';
+                        }
 
-            return inject;
-        });
+                        return inject + 'require(\'' + loadersForFile + './' + filePath + '\');\n';
+                    }
 
-        injections.filter(function(inject) {
-            return typeof inject === 'string';
-        });
+                    let inject = 'import ';
+                    if (varName) {
+                        inject = varName + ' from ';
+                    }
 
-        if (injections.length) {
-            var srcInjection = injectBanner + injections.join('\n');
-
-            // support existing SourceMap
-            // https://github.com/mozilla/source-map#sourcenode
-            // https://github.com/webpack/imports-loader/blob/master/index.js#L34-L44
-            // https://webpack.github.io/docs/loaders.html#writing-a-loader
-            if (sourceMap) {
-                var currentRequest = loaderUtils.getCurrentRequest(this);
-                var SourceNode = SourceMap.SourceNode;
-                var SourceMapConsumer = SourceMap.SourceMapConsumer;
-                var sourceMapConsumer = new SourceMapConsumer(sourceMap);
-                var node = SourceNode.fromStringWithSourceMap(source, sourceMapConsumer);
-
-                node.prepend(srcInjection);
-
-                var result = node.toStringWithSourceMap({
-                    file: currentRequest
+                    return inject + '\'' + loadersForFile + './' + filePath + '\';\n';
+                })
+                // eslint-disable-next-line
+                .catch((e) => {
+                    // log a warning/error?
                 });
+        }))
+        .then(results => {
 
-                this.callback(null, result.code, result.map.toJSON());
+            const injections = results.filter(x => typeof x === 'string');
 
+            if (injections.length) {
+                const srcInjection = injections.join('\n');
+
+                // support existing SourceMap
+                // https://github.com/mozilla/source-map#sourcenode
+                // https://github.com/webpack/imports-loader/blob/master/index.js#L34-L44
+                // https://webpack.github.io/docs/loaders.html#writing-a-loader
+                if (sourceMap) {
+                    const currentRequest = loaderUtils.getCurrentRequest(this);
+                    const SourceNode = SourceMap.SourceNode;
+                    const SourceMapConsumer = SourceMap.SourceMapConsumer;
+                    const sourceMapConsumer = new SourceMapConsumer(sourceMap);
+                    const node = SourceNode.fromStringWithSourceMap(sourceString, sourceMapConsumer);
+
+                    node.prepend(srcInjection);
+
+                    const result = node.toStringWithSourceMap({
+                        file: currentRequest
+                    });
+
+                    callback(null, result.code, result.map.toJSON());
+                    return;
+                }
+
+                // prepend collected inject at the top of file
+                callback(null, srcInjection + sourceString);
                 return;
             }
 
-            // prepend collected inject at the top of file
-            return srcInjection + source;
-        }
-
-    }
-
-    // return the original source and sourceMap
-    if (sourceMap) {
-        this.callback(null, source, sourceMap);
-        return;
-    }
-
-    // return the original source
-    return source;
+            // return the originals
+            callback(null, source, sourceMap);
+        });
 };
