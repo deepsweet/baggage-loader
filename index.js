@@ -6,7 +6,7 @@ const SourceMap = require('source-map');
 
 const { applyPlaceholders, stat } = require('./lib/util');
 
-const HAS_COMMONJS = /(\s+require\s*\()|(module\.exports)/g;
+const HAS_COMMONJS = /(\s+require\s*\()|(module\.exports)/;
 
 module.exports = function(source, sourceMap) {
     this.cacheable(true);
