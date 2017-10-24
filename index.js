@@ -9,6 +9,7 @@ const { applyPlaceholders, stat } = require('./lib/util');
 const HAS_COMMONJS = /(\brequire\([^)]+\))|(module\.exports)/g;
 
 module.exports = function(source, sourceMap) {
+    this.cacheable(true);
     const callback = this.async();
 
     const query = loaderUtils.getOptions(this);
@@ -22,13 +23,9 @@ module.exports = function(source, sourceMap) {
     // /foo/bar -> bar
     const srcDirname = srcDirpath.split(path.sep).pop();
 
-    if (this.cacheable) {
-        this.cacheable();
-    }
-
     const hasCommonJS = HAS_COMMONJS.test(source);
 
-    return Promise.all(Object.keys(query)
+    Promise.all(Object.keys(query)
         .map(filePath => {
 
             let varName;
