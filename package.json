@@ -23,8 +23,8 @@
     "source-map": "0.x.x"
   },
   "devDependencies": {
-    "eslint": "^0.8.2",
-    "jscs": "^1.6.2"
+    "eslint": "^5.16.0",
+    "jscs": "^3.0.7"
   },
   "scripts": {
     "test": "eslint index.js lib/*.js && jscs index.js lib/*.js"
