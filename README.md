@@ -4,7 +4,7 @@
 [![travis](http://img.shields.io/travis/deepsweet/baggage-loader.svg?style=flat-square)](https://travis-ci.org/deepsweet/baggage-loader)
 [![climate](http://img.shields.io/codeclimate/github/deepsweet/baggage-loader.svg?style=flat-square)](https://codeclimate.com/github/deepsweet/baggage-loader/code)
 [![peer deps](http://img.shields.io/david/peer/deepsweet/baggage-loader.svg?style=flat-square)](https://david-dm.org/deepsweet/baggage-loader#info=peerDependencies)
-[![gratipay](http://img.shields.io/gratipay/deepsweet.svg?style=flat-square)](https://gratipay.com/deepsweet/)
+[![gratipay](http://img.shields.io/gratipay/deepsweet.svg?style=flat-square)](https://gratipay.com/deepsweet/) [![Greenkeeper badge](https://badges.greenkeeper.io/deepsweet/baggage-loader.svg)](https://greenkeeper.io/)
 
 Automatically require any resources related to the required one. See example below.
 
